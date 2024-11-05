@@ -22,8 +22,13 @@ type GormLogger struct {
 
 // LogMode implements the LogMode function of logger.Interface. This always
 // returns an identical implementation, the log level is handled by zap.
-func (GormLogger) LogMode(logger.LogLevel) logger.Interface {
-	return GormLogger{}
+func (gl *GormLogger) LogMode(level logger.LogLevel) logger.Interface {
+	if level == logger.Silent {
+		gl.LogSQL = false
+	} else {
+		gl.LogSQL = true
+	}
+	return gl
 }
 
 // Error implements logger.Interface, it logs at ERROR level.
@@ -47,19 +52,15 @@ func (g GormLogger) Trace(ctx context.Context, begin time.Time, fc func() (strin
 	if !g.LogSQL {
 		return
 	}
-	ce := zapctx.Logger(ctx).Check(zapcore.DebugLevel, "TRACE")
-	if ce == nil {
-		return
-	}
 	fields := make([]zapcore.Field, 3, 4)
-	fields[0] = zap.Stringer("time", time.Since(begin))
+	fields[0] = zap.Stringer("elapsed", time.Since(begin))
 	sql, rows := fc()
 	fields[1] = zap.String("sql", sql)
 	fields[2] = zap.Int64("rows", rows)
 	if err != nil {
 		fields = append(fields, zap.Error(err))
 	}
-	ce.Write(fields...)
+	zapctx.Debug(ctx, "sql log", fields...)
 }
 
-var _ logger.Interface = GormLogger{}
+var _ logger.Interface = &GormLogger{}

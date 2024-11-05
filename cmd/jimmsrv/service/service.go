@@ -523,7 +523,7 @@ func openDB(ctx context.Context, dsn string, logSQL bool) (*gorm.DB, error) {
 		return nil, errors.E(errors.CodeServerConfiguration, "unsupported DSN")
 	}
 	return gorm.Open(dialect, &gorm.Config{
-		Logger: logger.GormLogger{LogSQL: logSQL},
+		Logger: &logger.GormLogger{LogSQL: logSQL},
 		NowFunc: func() time.Time {
 			// This is to set the timestamp precision at the service level.
 			return time.Now().Truncate(time.Microsecond)

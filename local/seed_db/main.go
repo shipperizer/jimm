@@ -26,7 +26,7 @@ func main() {
 	ctx := context.Background()
 
 	gdb, err := gorm.Open(postgres.Open("postgresql://jimm:jimm@localhost/jimm"), &gorm.Config{
-		Logger: logger.GormLogger{},
+		Logger: &logger.GormLogger{},
 	})
 
 	if err != nil {

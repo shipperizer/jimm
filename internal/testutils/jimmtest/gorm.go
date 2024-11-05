@@ -20,10 +20,10 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 
 	"github.com/canonical/jimm/v3/internal/db"
 	"github.com/canonical/jimm/v3/internal/errors"
+	"github.com/canonical/jimm/v3/internal/logger"
 )
 
 // A Tester is the test interface required by this package.
@@ -33,52 +33,6 @@ type Tester interface {
 	Name() string
 	Cleanup(f func())
 }
-
-// A gormLogger is a gorm.Logger that is used in tests. It logs everything
-// to the test.
-type gormLogger struct {
-	t     Tester
-	level logger.LogLevel
-}
-
-// NewGormLogger returns a gorm logger.Interface that can be used in a test
-// All output is logged to the test.
-func NewGormLogger(t Tester, l logger.LogLevel) logger.Interface {
-	return gormLogger{t: t, level: l}
-}
-
-func (l gormLogger) LogMode(_ logger.LogLevel) logger.Interface {
-	return l
-}
-
-func (l gormLogger) Info(_ context.Context, fmt string, args ...interface{}) {
-	if l.level >= logger.Info {
-		l.t.Logf(fmt, args...)
-	}
-}
-
-func (l gormLogger) Warn(_ context.Context, fmt string, args ...interface{}) {
-	if l.level >= logger.Warn {
-		l.t.Logf(fmt, args...)
-	}
-}
-
-func (l gormLogger) Error(_ context.Context, fmt string, args ...interface{}) {
-	if l.level >= logger.Error {
-		l.t.Logf(fmt, args...)
-	}
-}
-
-func (l gormLogger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
-	sql, rows := fc()
-	errS := "<nil>"
-	if err != nil {
-		errS = fmt.Sprintf("%q", err.Error())
-	}
-	l.Info(ctx, "sql:%q rows:%d, error:%s, duration:%0.3fms", sql, rows, errS, float64(time.Since(begin).Microseconds())/10e3)
-}
-
-var _ logger.Interface = gormLogger{}
 
 // PostgresDB returns a PostgreSQL database instance for tests. To improve
 // performance it creates a new database from a template (which has no data but
@@ -94,11 +48,6 @@ func PostgresDB(t Tester, nowFunc func() time.Time) *gorm.DB {
 // Useful for GoCheck tests that don't support a cleanup function and require the DB
 // name for manual cleanup.
 func PostgresDBWithDbName(t Tester, nowFunc func() time.Time) (*gorm.DB, string) {
-	_, present := os.LookupEnv("TERSE")
-	logLevel := logger.Info
-	if present {
-		logLevel = logger.Warn
-	}
 
 	wrappedNowFunc := func() time.Time {
 		var now time.Time
@@ -110,7 +59,7 @@ func PostgresDBWithDbName(t Tester, nowFunc func() time.Time) (*gorm.DB, string)
 		return now.Truncate(time.Microsecond)
 	}
 	cfg := gorm.Config{
-		Logger:  NewGormLogger(t, logLevel),
+		Logger:  logger.NewGormTestLogger(t),
 		NowFunc: wrappedNowFunc,
 	}
 

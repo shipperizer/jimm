@@ -70,6 +70,9 @@ E.g. in `internal/jujuapi` an example command to only run a single suite test wo
 $ go test ./internal/jujuapi -check.f modelManagerSuite.TestListModelSummaries -run TestPackage ./internal/jujuapi
 ```
 
+### Env variables
+- `JIMM_TEST_LOG_SQL`: default is `"false"`, set this to `"true"` to show gorm SQL logs on test failure.
+
 ## Building/Publishing
 Below are instructions on building the various binaries that are part of the project as well as
 some information on how they are published.
