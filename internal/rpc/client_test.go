@@ -518,12 +518,12 @@ func handleWS(f func(*websocket.Conn) error) http.Handler {
 		defer c.Close()
 		err = f(c)
 		var cm []byte
+		closeError, isCloseError := err.(*websocket.CloseError)
 		switch {
 		case err == nil:
 			cm = websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
-		case websocket.IsCloseError(err):
-			ce := err.(*websocket.CloseError)
-			cm = websocket.FormatCloseMessage(ce.Code, ce.Text)
+		case isCloseError:
+			cm = websocket.FormatCloseMessage(closeError.Code, closeError.Text)
 		default:
 			cm = websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error())
 		}
