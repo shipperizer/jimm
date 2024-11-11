@@ -4,6 +4,7 @@ package rebac_admin
 
 import (
 	"context"
+	"strings"
 
 	"github.com/canonical/rebac-admin-ui-handlers/v1/resources"
 
@@ -19,7 +20,7 @@ const ServiceAccount = "serviceaccount"
 
 // For rebac v1 this list is kept manually.
 // The reason behind that is we want to decide what relations to expose to rebac admin ui.
-var EntitlementsList = []resources.EntitlementSchema{
+var entitlementsList = []resources.EntitlementSchema{
 	// applicationoffer
 	{Entitlement: "administrator", ReceiverType: "user", EntityType: ApplicationOffer},
 	{Entitlement: "administrator", ReceiverType: "user:*", EntityType: ApplicationOffer},
@@ -78,7 +79,22 @@ func newEntitlementService() *entitlementsService {
 
 // ListEntitlements returns the list of entitlements in JSON format.
 func (s *entitlementsService) ListEntitlements(ctx context.Context, params *resources.GetEntitlementsParams) ([]resources.EntitlementSchema, error) {
-	return EntitlementsList, nil
+
+	if params.Filter == nil || *params.Filter == "" {
+		return entitlementsList, nil
+	}
+	match := *params.Filter
+
+	entitlementsFilteredList := make([]resources.EntitlementSchema, 0)
+
+	for _, entitlement := range entitlementsList {
+		if strings.Contains(entitlement.Entitlement, match) ||
+			strings.Contains(entitlement.EntityType, match) ||
+			strings.Contains(entitlement.ReceiverType, match) {
+			entitlementsFilteredList = append(entitlementsFilteredList, entitlement)
+		}
+	}
+	return entitlementsFilteredList, nil
 }
 
 // RawEntitlements returns the list of entitlements as raw text.
