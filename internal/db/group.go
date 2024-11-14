@@ -82,13 +82,12 @@ func (d *Database) GetGroup(ctx context.Context, group *dbmodel.GroupEntry) (err
 	return nil
 }
 
-// ForEachGroup iterates through every group calling the given function
-// for each one. If the given function returns an error the iteration
-// will stop immediately and the error will be returned unmodified.
-func (d *Database) ForEachGroup(ctx context.Context, limit, offset int, f func(*dbmodel.GroupEntry) error) (err error) {
-	const op = errors.Op("db.ForEachGroup")
+// ListGroups returns a paginated list of groups defined by limit and offset.
+// match is used to fuzzy find based on entries' name or uuid using the LIKE operator (ex. LIKE %<match>%).
+func (d *Database) ListGroups(ctx context.Context, limit, offset int, match string) (_ []dbmodel.GroupEntry, err error) {
+	const op = errors.Op("db.ListGroups")
 	if err := d.ready(); err != nil {
-		return errors.E(op, err)
+		return nil, errors.E(op, err)
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, string(op))
@@ -96,27 +95,17 @@ func (d *Database) ForEachGroup(ctx context.Context, limit, offset int, f func(*
 	defer servermon.ErrorCounter(servermon.DBQueryErrorCount, &err, string(op))
 
 	db := d.DB.WithContext(ctx)
+	if match != "" {
+		db = db.Where("name LIKE ? OR uuid LIKE ?", "%"+match+"%", "%"+match+"%")
+	}
 	db = db.Order("name asc")
 	db = db.Limit(limit)
 	db = db.Offset(offset)
-	rows, err := db.Model(&dbmodel.GroupEntry{}).Rows()
-	if err != nil {
-		return errors.E(op, err)
+	var groups []dbmodel.GroupEntry
+	if err := db.Find(&groups).Error; err != nil {
+		return nil, errors.E(op, dbError(err))
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var group dbmodel.GroupEntry
-		if err := db.ScanRows(rows, &group); err != nil {
-			return errors.E(op, err)
-		}
-		if err := f(&group); err != nil {
-			return err
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return errors.E(op, dbError(err))
-	}
-	return nil
+	return groups, nil
 }
 
 // UpdateGroup updates the group identified by its ID.

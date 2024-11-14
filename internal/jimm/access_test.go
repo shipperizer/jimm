@@ -1079,8 +1079,8 @@ func TestListGroups(t *testing.T) {
 	u := openfga.NewUser(&user, ofgaClient)
 	u.JimmAdmin = true
 
-	filter := pagination.NewOffsetFilter(10, 0)
-	groups, err := j.ListGroups(ctx, u, filter)
+	pagination := pagination.NewOffsetFilter(10, 0)
+	groups, err := j.ListGroups(ctx, u, pagination, "")
 	c.Assert(err, qt.IsNil)
 	c.Assert(groups, qt.DeepEquals, []dbmodel.GroupEntry{group})
 
@@ -1095,7 +1095,7 @@ func TestListGroups(t *testing.T) {
 		_, err := j.AddGroup(ctx, u, name)
 		c.Assert(err, qt.IsNil)
 	}
-	groups, err = j.ListGroups(ctx, u, filter)
+	groups, err = j.ListGroups(ctx, u, pagination, "")
 	c.Assert(err, qt.IsNil)
 	sort.Slice(groups, func(i, j int) bool {
 		return groups[i].Name < groups[j].Name

@@ -790,18 +790,15 @@ func (j *JIMM) RemoveGroup(ctx context.Context, user *openfga.User, name string)
 }
 
 // ListGroups returns a list of groups known to JIMM.
-func (j *JIMM) ListGroups(ctx context.Context, user *openfga.User, filter pagination.LimitOffsetPagination) ([]dbmodel.GroupEntry, error) {
+// `match` will filter the list fuzzy matching group's name or uuid.
+func (j *JIMM) ListGroups(ctx context.Context, user *openfga.User, pagination pagination.LimitOffsetPagination, match string) ([]dbmodel.GroupEntry, error) {
 	const op = errors.Op("jimm.ListGroups")
 
 	if !user.JimmAdmin {
 		return nil, errors.E(op, errors.CodeUnauthorized, "unauthorized")
 	}
 
-	var groups []dbmodel.GroupEntry
-	err := j.Database.ForEachGroup(ctx, filter.Limit(), filter.Offset(), func(ge *dbmodel.GroupEntry) error {
-		groups = append(groups, *ge)
-		return nil
-	})
+	groups, err := j.Database.ListGroups(ctx, pagination.Limit(), pagination.Offset(), match)
 	if err != nil {
 		return nil, errors.E(op, err)
 	}

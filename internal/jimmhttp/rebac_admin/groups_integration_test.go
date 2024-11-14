@@ -30,6 +30,37 @@ func (s *rebacAdminSuite) SetUpTest(c *gc.C) {
 
 var _ = gc.Suite(&rebacAdminSuite{})
 
+func (s rebacAdminSuite) TestListGroupsWithFilterIntegration(c *gc.C) {
+	ctx := context.Background()
+	for i := range 10 {
+		_, err := s.JIMM.AddGroup(ctx, s.AdminUser, fmt.Sprintf("test-group-filter-%d", i))
+		c.Assert(err, gc.IsNil)
+	}
+
+	ctx = rebac_handlers.ContextWithIdentity(ctx, s.AdminUser)
+	pageSize := 5
+	page := 0
+	params := &resources.GetGroupsParams{Size: &pageSize, Page: &page}
+	res, err := s.groupSvc.ListGroups(ctx, params)
+	c.Assert(err, gc.IsNil)
+	c.Assert(res, gc.Not(gc.IsNil))
+	c.Assert(res.Meta.Size, gc.Equals, 5)
+
+	match := "group-filter-1"
+	params.Filter = &match
+	res, err = s.groupSvc.ListGroups(ctx, params)
+	c.Assert(err, gc.IsNil)
+	c.Assert(res, gc.Not(gc.IsNil))
+	c.Assert(len(res.Data), gc.Equals, 1)
+
+	match = "group"
+	params.Filter = &match
+	res, err = s.groupSvc.ListGroups(ctx, params)
+	c.Assert(err, gc.IsNil)
+	c.Assert(res, gc.Not(gc.IsNil))
+	c.Assert(len(res.Data), gc.Equals, pageSize)
+}
+
 func (s rebacAdminSuite) TestGetGroupIdentitiesIntegration(c *gc.C) {
 	ctx := context.Background()
 	group, err := s.JIMM.AddGroup(ctx, s.AdminUser, "test-group")
