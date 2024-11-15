@@ -56,7 +56,7 @@ type JIMM struct {
 	GetJimmControllerAccess_           func(ctx context.Context, user *openfga.User, tag names.UserTag) (string, error)
 	FetchIdentity_                     func(ctx context.Context, username string) (*openfga.User, error)
 	CountIdentities_                   func(ctx context.Context, user *openfga.User) (int, error)
-	ListIdentities_                    func(ctx context.Context, user *openfga.User, filter pagination.LimitOffsetPagination) ([]openfga.User, error)
+	ListIdentities_                    func(ctx context.Context, user *openfga.User, pagination pagination.LimitOffsetPagination, match string) ([]openfga.User, error)
 	GetUserCloudAccess_                func(ctx context.Context, user *openfga.User, cloud names.CloudTag) (string, error)
 	GetUserControllerAccess_           func(ctx context.Context, user *openfga.User, controller names.ControllerTag) (string, error)
 	GetUserModelAccess_                func(ctx context.Context, user *openfga.User, model names.ModelTag) (string, error)
@@ -227,11 +227,11 @@ func (j *JIMM) CountIdentities(ctx context.Context, user *openfga.User) (int, er
 	}
 	return j.CountIdentities_(ctx, user)
 }
-func (j *JIMM) ListIdentities(ctx context.Context, user *openfga.User, filter pagination.LimitOffsetPagination) ([]openfga.User, error) {
+func (j *JIMM) ListIdentities(ctx context.Context, user *openfga.User, pagination pagination.LimitOffsetPagination, match string) ([]openfga.User, error) {
 	if j.ListIdentities_ == nil {
 		return nil, errors.E(errors.CodeNotImplemented)
 	}
-	return j.ListIdentities_(ctx, user, filter)
+	return j.ListIdentities_(ctx, user, pagination, match)
 }
 func (j *JIMM) GetUserCloudAccess(ctx context.Context, user *openfga.User, cloud names.CloudTag) (string, error) {
 	if j.GetUserCloudAccess_ == nil {

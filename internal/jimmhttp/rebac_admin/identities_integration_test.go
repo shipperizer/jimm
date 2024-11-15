@@ -25,6 +25,37 @@ type identitiesSuite struct {
 
 var _ = gc.Suite(&identitiesSuite{})
 
+func (s *identitiesSuite) TestIdentitiesList(c *gc.C) {
+	ctx := context.Background()
+	ctx = rebac_handlers.ContextWithIdentity(ctx, s.AdminUser)
+	identitySvc := rebac_admin.NewidentitiesService(s.JIMM)
+	for i := range 5 {
+		user := names.NewUserTag(fmt.Sprintf("test-user-match-%d@canonical.com", i))
+		s.AddUser(c, user.Id())
+	}
+	pageSize := 5
+	page := 0
+	params := &resources.GetIdentitiesParams{Size: &pageSize, Page: &page}
+	res, err := identitySvc.ListIdentities(ctx, params)
+	c.Assert(err, gc.IsNil)
+	c.Assert(res, gc.Not(gc.IsNil))
+	c.Assert(res.Meta.Size, gc.Equals, 5)
+
+	match := "test-user-match-1"
+	params.Filter = &match
+	res, err = identitySvc.ListIdentities(ctx, params)
+	c.Assert(err, gc.IsNil)
+	c.Assert(res, gc.Not(gc.IsNil))
+	c.Assert(len(res.Data), gc.Equals, 1)
+
+	match = "test-user"
+	params.Filter = &match
+	res, err = identitySvc.ListIdentities(ctx, params)
+	c.Assert(err, gc.IsNil)
+	c.Assert(res, gc.Not(gc.IsNil))
+	c.Assert(len(res.Data), gc.Equals, pageSize)
+}
+
 func (s *identitiesSuite) TestIdentityPatchGroups(c *gc.C) {
 	// initialization
 	ctx := context.Background()
