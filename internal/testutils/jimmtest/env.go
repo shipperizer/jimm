@@ -269,20 +269,11 @@ func (e *Environment) PopulateDB(c Tester, db db.Database) {
 
 // ApplicationOffer represents Juju application offers.
 type ApplicationOffer struct {
-	ModelName              string `json:"model-name"`
-	ModelOwner             string `json:"model-owner"`
-	ApplicationName        string `json:"application-name"`
-	ApplicationDescription string `json:"application-description"`
-	Name                   string `json:"name"`
-	UUID                   string `json:"uuid"`
-	URL                    string `json:"url"`
-	// The fields below cannot currently be set by the yaml declaration
-	// but they don't need to be populated at the moment.
-	// Endpoints []ApplicationOfferRemoteEndpoint
-	// Spaces []ApplicationOfferRemoteSpace
-	// Bindings StringMap
-	// Connections []ApplicationOfferConnection
-	CharmURL string `json:"charm-url"`
+	ModelName  string `json:"model-name"`
+	ModelOwner string `json:"model-owner"`
+	Name       string `json:"name"`
+	UUID       string `json:"uuid"`
+	URL        string `json:"url"`
 
 	env *Environment
 	dbo dbmodel.ApplicationOffer
@@ -294,12 +285,10 @@ func (cd *ApplicationOffer) DBObject(c Tester, db db.Database) dbmodel.Applicati
 	}
 
 	cd.dbo.Model = cd.env.Model(cd.ModelOwner, cd.ModelName).DBObject(c, db)
-	cd.dbo.ApplicationName = cd.ApplicationName
-	cd.dbo.ApplicationDescription = cd.ApplicationDescription
+
 	cd.dbo.Name = cd.Name
 	cd.dbo.UUID = cd.UUID
 	cd.dbo.URL = cd.URL
-	cd.dbo.CharmURL = cd.CharmURL
 
 	err := db.AddApplicationOffer(context.Background(), &cd.dbo)
 	if err != nil {
