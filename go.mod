@@ -27,7 +27,7 @@ require (
 	github.com/canonical/go-service v1.0.0
 	github.com/canonical/ofga v0.10.0
 	github.com/canonical/rebac-admin-ui-handlers v0.1.2
-	github.com/coreos/go-oidc/v3 v3.9.0
+	github.com/coreos/go-oidc/v3 v3.11.0
 	github.com/dustinkirkland/golang-petname v0.0.0-20231002161417-6a283f1aaaf2
 	github.com/frankban/quicktest v1.14.6
 	github.com/go-chi/chi/v5 v5.0.12
@@ -130,8 +130,7 @@ require (
 	github.com/gdamore/tcell/v2 v2.5.1 // indirect
 	github.com/getkin/kin-openapi v0.125.0 // indirect
 	github.com/go-goose/goose/v5 v5.0.0-20230421180421-abaee9096e3a // indirect
-	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
-	github.com/go-jose/go-jose/v4 v4.0.1 // indirect
+	github.com/go-jose/go-jose/v4 v4.0.2 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-macaroon-bakery/macaroonpb v1.0.0 // indirect
