@@ -448,7 +448,7 @@ func TestParseAndValidateTag(t *testing.T) {
 	err = j.Database.Migrate(ctx, false)
 	c.Assert(err, qt.IsNil)
 
-	user, _, _, model, _, _, _ := createTestControllerEnvironment(ctx, c, j.Database)
+	user, _, _, model, _, _, _, _ := createTestControllerEnvironment(ctx, c, j.Database)
 
 	jimmTag := "model-" + user.Name + "/" + model.Name + "#administrator"
 
@@ -495,7 +495,7 @@ func TestResolveTags(t *testing.T) {
 	err := j.Database.Migrate(ctx, false)
 	c.Assert(err, qt.IsNil)
 
-	identity, group, controller, model, offer, cloud, _ := createTestControllerEnvironment(ctx, c, j.Database)
+	identity, group, controller, model, offer, cloud, _, role := createTestControllerEnvironment(ctx, c, j.Database)
 
 	testCases := []struct {
 		desc     string
@@ -517,6 +517,14 @@ func TestResolveTags(t *testing.T) {
 		desc:     "map group UUID with relation",
 		input:    "group-" + group.UUID + "#member",
 		expected: ofganames.ConvertTagWithRelation(jimmnames.NewGroupTag(group.UUID), ofganames.MemberRelation),
+	}, {
+		desc:     "map role UUID",
+		input:    "role-" + role.UUID,
+		expected: ofganames.ConvertTag(jimmnames.NewRoleTag(role.UUID)),
+	}, {
+		desc:     "map role UUID with relation",
+		input:    "role-" + role.UUID + "#assignee",
+		expected: ofganames.ConvertTagWithRelation(jimmnames.NewRoleTag(role.UUID), ofganames.AssigneeRelation),
 	}, {
 		desc:     "map jimm controller",
 		input:    "controller-" + "jimm",
@@ -575,7 +583,7 @@ func TestResolveTupleObjectHandlesErrors(t *testing.T) {
 	err := j.Database.Migrate(ctx, false)
 	c.Assert(err, qt.IsNil)
 
-	_, _, controller, model, offer, _, _ := createTestControllerEnvironment(ctx, c, j.Database)
+	_, _, controller, model, offer, _, _, _ := createTestControllerEnvironment(ctx, c, j.Database)
 
 	type test struct {
 		input string
@@ -630,6 +638,129 @@ func TestResolveTupleObjectHandlesErrors(t *testing.T) {
 	}
 }
 
+func TestToJAASTag(t *testing.T) {
+	c := qt.New(t)
+	ctx := context.Background()
+
+	now := time.Now().UTC().Round(time.Millisecond)
+	j := &jimm.JIMM{
+		UUID: uuid.NewString(),
+		Database: db.Database{
+			DB: jimmtest.PostgresDB(c, func() time.Time { return now }),
+		},
+	}
+
+	err := j.Database.Migrate(ctx, false)
+	c.Assert(err, qt.IsNil)
+
+	user, group, controller, model, applicationOffer, cloud, _, role := createTestControllerEnvironment(ctx, c, j.Database)
+
+	serviceAccountId := petname.Generate(2, "-") + "@serviceaccount"
+
+	tests := []struct {
+		tag             *ofganames.Tag
+		expectedJAASTag string
+		expectedError   string
+	}{{
+		tag:             ofganames.ConvertTag(user.ResourceTag()),
+		expectedJAASTag: "user-" + user.Name,
+	}, {
+		tag:             ofganames.ConvertTag(jimmnames.NewServiceAccountTag(serviceAccountId)),
+		expectedJAASTag: "serviceaccount-" + serviceAccountId,
+	}, {
+		tag:             ofganames.ConvertTag(group.ResourceTag()),
+		expectedJAASTag: "group-" + group.Name,
+	}, {
+		tag:             ofganames.ConvertTag(controller.ResourceTag()),
+		expectedJAASTag: "controller-" + controller.Name,
+	}, {
+		tag:             ofganames.ConvertTag(model.ResourceTag()),
+		expectedJAASTag: "model-" + user.Name + "/" + model.Name,
+	}, {
+		tag:             ofganames.ConvertTag(applicationOffer.ResourceTag()),
+		expectedJAASTag: "applicationoffer-" + applicationOffer.URL,
+	}, {
+		tag:           &ofganames.Tag{},
+		expectedError: "unexpected tag kind: ",
+	}, {
+		tag:             ofganames.ConvertTag(cloud.ResourceTag()),
+		expectedJAASTag: "cloud-" + cloud.Name,
+	}, {
+		tag:             ofganames.ConvertTag(role.ResourceTag()),
+		expectedJAASTag: "role-" + role.Name,
+	}}
+	for _, test := range tests {
+		t, err := j.ToJAASTag(ctx, test.tag, true)
+		if test.expectedError != "" {
+			c.Assert(err, qt.ErrorMatches, test.expectedError)
+		} else {
+			c.Assert(err, qt.IsNil)
+			c.Assert(t, qt.Equals, test.expectedJAASTag)
+		}
+	}
+}
+
+func TestToJAASTagNoUUIDResolution(t *testing.T) {
+	c := qt.New(t)
+	ctx := context.Background()
+
+	now := time.Now().UTC().Round(time.Millisecond)
+	j := &jimm.JIMM{
+		UUID: uuid.NewString(),
+		Database: db.Database{
+			DB: jimmtest.PostgresDB(c, func() time.Time { return now }),
+		},
+	}
+
+	err := j.Database.Migrate(ctx, false)
+	c.Assert(err, qt.IsNil)
+
+	user, group, controller, model, applicationOffer, cloud, _, role := createTestControllerEnvironment(ctx, c, j.Database)
+	serviceAccountId := petname.Generate(2, "-") + "@serviceaccount"
+
+	tests := []struct {
+		tag             *ofganames.Tag
+		expectedJAASTag string
+		expectedError   string
+	}{{
+		tag:             ofganames.ConvertTag(user.ResourceTag()),
+		expectedJAASTag: "user-" + user.Name,
+	}, {
+		tag:             ofganames.ConvertTag(jimmnames.NewServiceAccountTag(serviceAccountId)),
+		expectedJAASTag: "serviceaccount-" + serviceAccountId,
+	}, {
+		tag:             ofganames.ConvertTag(group.ResourceTag()),
+		expectedJAASTag: "group-" + group.UUID,
+	}, {
+		tag:             ofganames.ConvertTag(controller.ResourceTag()),
+		expectedJAASTag: "controller-" + controller.UUID,
+	}, {
+		tag:             ofganames.ConvertTag(model.ResourceTag()),
+		expectedJAASTag: "model-" + model.UUID.String,
+	}, {
+		tag:             ofganames.ConvertTag(applicationOffer.ResourceTag()),
+		expectedJAASTag: "applicationoffer-" + applicationOffer.UUID,
+	}, {
+		tag:             ofganames.ConvertTag(cloud.ResourceTag()),
+		expectedJAASTag: "cloud-" + cloud.Name,
+	}, {
+		tag:             ofganames.ConvertTag(role.ResourceTag()),
+		expectedJAASTag: "role-" + role.UUID,
+	}, {
+		tag:             &ofganames.Tag{},
+		expectedJAASTag: "-",
+	}}
+	for _, test := range tests {
+		t, err := j.ToJAASTag(ctx, test.tag, false)
+		if test.expectedError != "" {
+			c.Assert(err, qt.ErrorMatches, test.expectedError)
+		} else {
+			c.Assert(err, qt.IsNil)
+			c.Assert(t, qt.Equals, test.expectedJAASTag)
+		}
+	}
+}
+
 // createTestControllerEnvironment is a utility function creating the necessary components of adding a:
 //   - user
 //   - user group
@@ -638,6 +769,7 @@ func TestResolveTupleObjectHandlesErrors(t *testing.T) {
 //   - application offer
 //   - cloud
 //   - cloud credential
+//   - role
 //
 // Into the test database, returning the dbmodels to be utilised for values within tests.
 //
@@ -654,7 +786,8 @@ func createTestControllerEnvironment(ctx context.Context, c *qt.C, db db.Databas
 	dbmodel.Model,
 	dbmodel.ApplicationOffer,
 	dbmodel.Cloud,
-	dbmodel.CloudCredential) {
+	dbmodel.CloudCredential,
+	dbmodel.RoleEntry) {
 
 	_, err := db.AddGroup(ctx, "test-group")
 	c.Assert(err, qt.IsNil)
@@ -735,7 +868,10 @@ func createTestControllerEnvironment(ctx context.Context, c *qt.C, db db.Databas
 	c.Assert(err, qt.IsNil)
 	c.Assert(len(offer.UUID), qt.Equals, 36)
 
-	return *u, group, controller, model, offer, cloud, cred
+	role, err := db.AddRole(ctx, petname.Generate(2, "-"))
+	c.Assert(err, qt.IsNil)
+
+	return *u, group, controller, model, offer, cloud, cred, *role
 }
 
 func TestAddGroup(t *testing.T) {
@@ -867,7 +1003,7 @@ func TestRemoveGroup(t *testing.T) {
 	err = j.Database.Migrate(ctx, false)
 	c.Assert(err, qt.IsNil)
 
-	user, group, _, _, _, _, _ := createTestControllerEnvironment(ctx, c, j.Database)
+	user, group, _, _, _, _, _, _ := createTestControllerEnvironment(ctx, c, j.Database)
 	u := openfga.NewUser(&user, ofgaClient)
 	u.JimmAdmin = true
 
@@ -897,7 +1033,7 @@ func TestRemoveGroupRemovesTuples(t *testing.T) {
 	err = j.Database.Migrate(ctx, false)
 	c.Assert(err, qt.IsNil)
 
-	user, group, controller, model, _, _, _ := createTestControllerEnvironment(ctx, c, j.Database)
+	user, group, controller, model, _, _, _, _ := createTestControllerEnvironment(ctx, c, j.Database)
 
 	_, err = j.Database.AddGroup(ctx, "test-group2")
 	c.Assert(err, qt.IsNil)
@@ -981,7 +1117,7 @@ func TestRenameGroup(t *testing.T) {
 	err = j.Database.Migrate(ctx, false)
 	c.Assert(err, qt.IsNil)
 
-	user, group, controller, model, _, _, _ := createTestControllerEnvironment(ctx, c, j.Database)
+	user, group, controller, model, _, _, _, _ := createTestControllerEnvironment(ctx, c, j.Database)
 
 	u := openfga.NewUser(&user, ofgaClient)
 	u.JimmAdmin = true
@@ -1073,7 +1209,7 @@ func TestListGroups(t *testing.T) {
 	err = j.Database.Migrate(ctx, false)
 	c.Assert(err, qt.IsNil)
 
-	user, group, _, _, _, _, _ := createTestControllerEnvironment(ctx, c, j.Database)
+	user, group, _, _, _, _, _, _ := createTestControllerEnvironment(ctx, c, j.Database)
 
 	u := openfga.NewUser(&user, ofgaClient)
 	u.JimmAdmin = true
