@@ -610,7 +610,7 @@ func TestResolveTupleObjectHandlesErrors(t *testing.T) {
 		},
 		// Resolves bad applicationoffers where it cannot be found on the specified controller/model combo
 		{
-			input: "applicationoffer-" + controller.Name + ":alex/" + model.Name + "." + offer.Name + "fluff",
+			input: "applicationoffer-" + controller.Name + ":alex/" + model.Name + "." + offer.UUID + "fluff",
 			want:  "application offer not found",
 		},
 		{
@@ -726,11 +726,10 @@ func createTestControllerEnvironment(ctx context.Context, c *qt.C, db db.Databas
 	c.Assert(err, qt.IsNil)
 
 	offer := dbmodel.ApplicationOffer{
-		UUID:            id.String(),
-		Name:            offerName,
-		ModelID:         model.ID,
-		ApplicationName: petname.Generate(2, "-"),
-		URL:             offerURL.String(),
+		UUID:    id.String(),
+		Name:    offerName,
+		ModelID: model.ID,
+		URL:     offerURL.String(),
 	}
 	err = db.AddApplicationOffer(context.Background(), &offer)
 	c.Assert(err, qt.IsNil)
