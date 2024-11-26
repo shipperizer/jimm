@@ -964,39 +964,31 @@ func TestImportModel(t *testing.T) {
 				Level: "essential",
 				Owner: "alice@canonical.com",
 			},
-			Offers: []dbmodel.ApplicationOffer{
-				{
-					ApplicationName: "app1",
-					URL:             "url1",
-					UUID:            "00000001-0000-0000-0000-000000000001",
-					Name:            "offer1",
-				},
-				{
-					ApplicationName: "app2",
-					URL:             "url2",
-					UUID:            "00000001-0000-0000-0000-000000000002",
-					Name:            "offer2",
-				},
-			},
+			Offers: []dbmodel.ApplicationOffer{{
+				URL:  "url1",
+				UUID: "00000001-0000-0000-0000-000000000001",
+				Name: "offer1",
+			}, {
+				URL:  "url2",
+				UUID: "00000001-0000-0000-0000-000000000002",
+				Name: "offer2",
+			}},
 		},
-		offers: []jujuparams.ApplicationOfferAdminDetailsV5{
-			{
-				ApplicationOfferDetailsV5: jujuparams.ApplicationOfferDetailsV5{
-					OfferUUID: "00000001-0000-0000-0000-000000000001",
-					OfferName: "offer1",
-					OfferURL:  "url1",
-				},
-				ApplicationName: "app1",
+		offers: []jujuparams.ApplicationOfferAdminDetailsV5{{
+			ApplicationOfferDetailsV5: jujuparams.ApplicationOfferDetailsV5{
+				OfferUUID: "00000001-0000-0000-0000-000000000001",
+				OfferName: "offer1",
+				OfferURL:  "url1",
 			},
-			{
-				ApplicationOfferDetailsV5: jujuparams.ApplicationOfferDetailsV5{
-					OfferUUID: "00000001-0000-0000-0000-000000000002",
-					OfferName: "offer2",
-					OfferURL:  "url2",
-				},
-				ApplicationName: "app2",
+			ApplicationName: "app1",
+		}, {
+			ApplicationOfferDetailsV5: jujuparams.ApplicationOfferDetailsV5{
+				OfferUUID: "00000001-0000-0000-0000-000000000002",
+				OfferName: "offer2",
+				OfferURL:  "url2",
 			},
-		},
+			ApplicationName: "app2",
+		}},
 	}}
 
 	for _, test := range tests {

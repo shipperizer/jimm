@@ -570,9 +570,12 @@ func (m *modelImporter) save(ctx context.Context) error {
 			return err
 		}
 		for _, offer := range m.offersToAdd {
-			var dbOffer dbmodel.ApplicationOffer
-			dbOffer.FromJujuApplicationOfferAdminDetailsV5(offer)
-			dbOffer.ModelID = m.model.ID
+			dbOffer := dbmodel.ApplicationOffer{
+				UUID:    offer.OfferUUID,
+				Name:    offer.OfferName,
+				URL:     offer.OfferURL,
+				ModelID: m.model.ID,
+			}
 			if err := m.jimm.Database.AddApplicationOffer(ctx, &dbOffer); err != nil {
 				if errors.ErrorCode(err) == errors.CodeAlreadyExists {
 					return fmt.Errorf("offer with URL %s already exists", offer.OfferURL)
