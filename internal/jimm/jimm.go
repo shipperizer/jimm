@@ -131,6 +131,10 @@ func (j *JIMM) AuthorizationClient() *openfga.OFGAClient {
 	return j.OpenFGAClient
 }
 
+func (j *JIMM) GetRoleManager() RoleManager {
+	return j.RoleManager
+}
+
 // OAuthAuthenticator is responsible for handling authentication
 // via OAuth2.0 AND JWT access tokens to JIMM.
 type OAuthAuthenticator interface {

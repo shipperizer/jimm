@@ -62,7 +62,7 @@ func (s *dbSuite) TestGetRole(c *qt.C) {
 	err = s.Database.GetRole(context.Background(), role)
 	c.Check(err, qt.ErrorMatches, "must specify uuid or name")
 
-	re1, err := s.Database.AddRole(context.TODO(), "test-role")
+	re1, err := s.Database.AddRole(context.Background(), "test-role")
 	c.Assert(err, qt.IsNil)
 	c.Assert(re1.UUID, qt.Equals, uuid1)
 
@@ -92,7 +92,7 @@ func (s *dbSuite) TestUpdateRoleName(c *qt.C) {
 	c.Check(errors.ErrorCode(err), qt.Equals, errors.CodeNotFound)
 
 	err = s.Database.UpdateRoleName(context.Background(), "", "")
-	c.Check(err, qt.ErrorMatches, "uuid must be specified")
+	c.Check(err, qt.ErrorMatches, "name must be specified")
 
 	_, err = s.Database.AddRole(context.Background(), "test-role")
 	c.Assert(err, qt.IsNil)
@@ -103,7 +103,7 @@ func (s *dbSuite) TestUpdateRoleName(c *qt.C) {
 	err = s.Database.GetRole(context.Background(), re1)
 	c.Assert(err, qt.IsNil)
 
-	err = s.Database.UpdateRoleName(context.Background(), re1.UUID, "renamed-role")
+	err = s.Database.UpdateRoleName(context.Background(), re1.Name, "renamed-role")
 	c.Check(err, qt.IsNil)
 
 	re2 := &dbmodel.RoleEntry{

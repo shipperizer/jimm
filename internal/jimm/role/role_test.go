@@ -169,7 +169,7 @@ func (s *roleManagerSuite) TestRenameRole(c *qt.C) {
 	re, err := s.db.AddRole(ctx, "models")
 	c.Assert(err, qt.IsNil)
 
-	err = s.manager.RenameRole(ctx, s.user, re.UUID, "models-role")
+	err = s.manager.RenameRole(ctx, s.user, re.Name, "models-role")
 	c.Assert(err, qt.IsNil)
 
 	updatedRe := &dbmodel.RoleEntry{

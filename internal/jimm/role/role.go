@@ -95,7 +95,7 @@ func (rm *roleManager) RemoveRole(ctx context.Context, user *openfga.User, roleN
 }
 
 // RenameRole renames a role in JIMM's DB.
-func (rm *roleManager) RenameRole(ctx context.Context, user *openfga.User, uuid, newName string) error {
+func (rm *roleManager) RenameRole(ctx context.Context, user *openfga.User, oldName, newName string) error {
 	const op = errors.Op("role.RenameRole")
 	zapctx.Info(ctx, string(op))
 
@@ -103,7 +103,7 @@ func (rm *roleManager) RenameRole(ctx context.Context, user *openfga.User, uuid,
 		return errors.E(op, errors.CodeUnauthorized, "unauthorized")
 	}
 
-	err := rm.store.UpdateRoleName(ctx, uuid, newName)
+	err := rm.store.UpdateRoleName(ctx, oldName, newName)
 	if err != nil {
 		return errors.E(op, err)
 	}

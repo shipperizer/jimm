@@ -53,6 +53,7 @@ type JIMM struct {
 	GetCloudCredential_                func(ctx context.Context, user *openfga.User, tag names.CloudCredentialTag) (*dbmodel.CloudCredential, error)
 	GetCloudCredentialAttributes_      func(ctx context.Context, u *openfga.User, cred *dbmodel.CloudCredential, hidden bool) (attrs map[string]string, redacted []string, err error)
 	GetCredentialStore_                func() jimmcreds.CredentialStore
+	GetRoleManager_                    func() jimm.RoleManager
 	GetJimmControllerAccess_           func(ctx context.Context, user *openfga.User, tag names.UserTag) (string, error)
 	FetchIdentity_                     func(ctx context.Context, username string) (*openfga.User, error)
 	CountIdentities_                   func(ctx context.Context, user *openfga.User) (int, error)
@@ -209,6 +210,14 @@ func (j *JIMM) GetCredentialStore() jimmcreds.CredentialStore {
 	}
 	return j.GetCredentialStore_()
 }
+
+func (j *JIMM) GetRoleManager() jimm.RoleManager {
+	if j.GetRoleManager_ == nil {
+		return nil
+	}
+	return j.GetRoleManager_()
+}
+
 func (j *JIMM) GetJimmControllerAccess(ctx context.Context, user *openfga.User, tag names.UserTag) (string, error) {
 	if j.GetJimmControllerAccess_ == nil {
 		return "", errors.E(errors.CodeNotImplemented)
