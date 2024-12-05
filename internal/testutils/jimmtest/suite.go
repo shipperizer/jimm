@@ -23,6 +23,7 @@ import (
 	"github.com/canonical/jimm/v3/internal/dbmodel"
 	"github.com/canonical/jimm/v3/internal/discharger"
 	"github.com/canonical/jimm/v3/internal/jimm"
+	"github.com/canonical/jimm/v3/internal/jimm/group"
 	"github.com/canonical/jimm/v3/internal/jimm/role"
 	"github.com/canonical/jimm/v3/internal/jimmhttp"
 	"github.com/canonical/jimm/v3/internal/jimmjwx"
@@ -84,9 +85,15 @@ func (s *JIMMSuite) SetUpTest(c *gc.C) {
 		UUID:            ControllerUUID,
 		OpenFGAClient:   s.OFGAClient,
 	}
+
 	roleManager, err := role.NewRoleManager(&s.JIMM.Database, s.OFGAClient)
 	c.Assert(err, gc.IsNil)
 	s.JIMM.RoleManager = roleManager
+
+	groupManager, err := group.NewGroupManager(&s.JIMM.Database, s.OFGAClient)
+	c.Assert(err, gc.IsNil)
+	s.JIMM.GroupManager = groupManager
+
 	ctx, cancel := context.WithCancel(context.Background())
 	s.cancel = cancel
 
@@ -270,7 +277,7 @@ func (s *JIMMSuite) AddModel(c *gc.C, owner names.UserTag, name string, cloud na
 
 func (s *JIMMSuite) AddGroup(c *gc.C, groupName string) dbmodel.GroupEntry {
 	ctx := context.Background()
-	group, err := s.JIMM.AddGroup(ctx, s.AdminUser, groupName)
+	group, err := s.JIMM.GroupManager.AddGroup(ctx, s.AdminUser, groupName)
 	c.Assert(err, gc.Equals, nil)
 	return *group
 }
