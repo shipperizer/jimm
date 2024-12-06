@@ -13,7 +13,6 @@ import (
 	"github.com/juju/juju/api/base"
 	"github.com/juju/juju/api/client/modelmanager"
 	controllerapi "github.com/juju/juju/api/controller/controller"
-	"github.com/juju/juju/controller"
 	"github.com/juju/juju/core/life"
 	jujuparams "github.com/juju/juju/rpc/params"
 	"github.com/juju/juju/state"
@@ -35,35 +34,20 @@ type controllerSuite struct {
 
 var _ = gc.Suite(&controllerSuite{})
 
-func (s *controllerSuite) TestControllerConfig(c *gc.C) {
+func (s *controllerSuite) TestControllerConfigGetNotSupported(c *gc.C) {
 	conn := s.open(c, nil, "test")
 	defer conn.Close()
 	client := controllerapi.NewClient(conn)
-	conf, err := client.ControllerConfig()
-	c.Assert(err, gc.Equals, nil)
-	c.Assert(conf, jc.DeepEquals, controller.Config(map[string]interface{}{}))
+	_, err := client.ControllerConfig()
+	c.Assert(jujuparams.IsCodeNotSupported(err), gc.Equals, true)
+}
 
-	adminConn := s.open(c, nil, "alice")
-	defer adminConn.Close()
-	err = adminConn.APICall("Controller", 11, "", "ConfigSet", jujuparams.ControllerConfigSet{
-		Config: map[string]interface{}{
-			"key1":           "value1",
-			"key2":           "value2",
-			"charmstore-url": "https://api.jujucharms.com/charmstore",
-			"metering-url":   "https://api.jujucharms.com/omnibus",
-		},
-	}, nil)
-	c.Assert(err, jc.ErrorIsNil)
-
-	client = controllerapi.NewClient(adminConn)
-	conf, err = client.ControllerConfig()
-	c.Assert(err, gc.Equals, nil)
-	c.Assert(conf, jc.DeepEquals, controller.Config(map[string]interface{}{
-		"key1":           "value1",
-		"key2":           "value2",
-		"charmstore-url": "https://api.jujucharms.com/charmstore",
-		"metering-url":   "https://api.jujucharms.com/omnibus",
-	}))
+func (s *controllerSuite) TestControllerConfigSetNotSupported(c *gc.C) {
+	conn := s.open(c, nil, "test")
+	defer conn.Close()
+	client := controllerapi.NewClient(conn)
+	err := client.ConfigSet(nil)
+	c.Assert(jujuparams.IsCodeNotSupported(err), gc.Equals, true)
 }
 
 func (s *controllerSuite) TestModelConfig(c *gc.C) {
@@ -143,20 +127,6 @@ func (s *controllerSuite) TestModelStatus(c *gc.C) {
 	defer conn.Close()
 	doTest(controllerapi.NewClient(conn))
 	doTest(modelmanager.NewClient(conn))
-}
-
-func (s *controllerSuite) TestConfigSet(c *gc.C) {
-	conn := s.open(c, nil, "alice")
-	defer conn.Close()
-
-	err := conn.APICall("Controller", 11, "", "ConfigSet", jujuparams.ControllerConfigSet{}, nil)
-	c.Assert(err, jc.ErrorIsNil)
-
-	conn1 := s.open(c, nil, "bob")
-	defer conn1.Close()
-
-	err = conn1.APICall("Controller", 11, "", "ConfigSet", jujuparams.ControllerConfigSet{}, nil)
-	c.Assert(err, gc.ErrorMatches, `unauthorized \(unauthorized access\)`)
 }
 
 func (s *controllerSuite) TestIdentityProviderURL(c *gc.C) {

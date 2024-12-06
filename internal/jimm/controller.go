@@ -678,54 +678,6 @@ func (m *modelImporter) handleModelDeltas(ctx context.Context) error {
 	return nil
 }
 
-// SetControllerConfig changes the value of specified controller configuration
-// settings.
-func (j *JIMM) SetControllerConfig(ctx context.Context, user *openfga.User, args jujuparams.ControllerConfigSet) error {
-	const op = errors.Op("jimm.SetControllerConfig")
-
-	if !user.JimmAdmin {
-		return errors.E(op, errors.CodeUnauthorized, "unauthorized")
-	}
-
-	err := j.Database.Transaction(func(tx *db.Database) error {
-		config := dbmodel.ControllerConfig{
-			Name: "jimm",
-		}
-		err := tx.GetControllerConfig(ctx, &config)
-		if err != nil && errors.ErrorCode(err) != errors.CodeNotFound {
-			return err
-		}
-		if config.Config == nil {
-			config.Config = make(map[string]interface{})
-		}
-		for key, value := range args.Config {
-			config.Config[key] = value
-		}
-		return tx.UpsertControllerConfig(ctx, &config)
-	})
-	if err != nil {
-		return errors.E(op, err)
-	}
-	return nil
-}
-
-// GetControllerConfig returns jimm's controller config.
-func (j *JIMM) GetControllerConfig(ctx context.Context, u *dbmodel.Identity) (*dbmodel.ControllerConfig, error) {
-	const op = errors.Op("jimm.GetControllerConfig")
-	config := dbmodel.ControllerConfig{
-		Name:   "jimm",
-		Config: make(map[string]interface{}),
-	}
-	err := j.Database.GetControllerConfig(ctx, &config)
-	if err != nil {
-		if errors.ErrorCode(err) == errors.CodeNotFound {
-			return &config, nil
-		}
-		return nil, errors.E(op, err)
-	}
-	return &config, nil
-}
-
 // UpdateMigratedModel asserts that the model has been migrated to the
 // specified controller and updates the internal model representation.
 func (j *JIMM) UpdateMigratedModel(ctx context.Context, user *openfga.User, modelTag names.ModelTag, targetControllerName string) error {
