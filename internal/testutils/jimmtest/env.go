@@ -36,7 +36,6 @@ type Environment struct {
 	Controllers       []Controller       `json:"controllers"`
 	Models            []Model            `json:"models"`
 	Users             []User             `json:"users"`
-	UserDefaults      []UserDefaults     `json:"user-defaults"`
 }
 
 func ParseEnvironment(c Tester, env string) *Environment {
@@ -82,15 +81,6 @@ func (e *Environment) CloudDefault(owner, cloud string) *CloudDefaults {
 	for i := range e.CloudDefaults {
 		if e.CloudDefaults[i].User == owner && e.CloudDefaults[i].Cloud == cloud {
 			return &e.CloudDefaults[i]
-		}
-	}
-	return nil
-}
-
-func (e *Environment) UserDefault(owner string) *UserDefaults {
-	for i := range e.UserDefaults {
-		if e.UserDefaults[i].User == owner {
-			return &e.UserDefaults[i]
 		}
 	}
 	return nil
@@ -257,10 +247,6 @@ func (e *Environment) PopulateDB(c Tester, db *db.Database) {
 		e.Models[i].env = e
 		e.Models[i].DBObject(c, db)
 	}
-	for i := range e.UserDefaults {
-		e.UserDefaults[i].env = e
-		e.UserDefaults[i].DBObject(c, db)
-	}
 	for i := range e.ApplicationOffers {
 		e.ApplicationOffers[i].env = e
 		e.ApplicationOffers[i].DBObject(c, db)
@@ -291,31 +277,6 @@ func (cd *ApplicationOffer) DBObject(c Tester, db *db.Database) dbmodel.Applicat
 	cd.dbo.URL = cd.URL
 
 	err := db.AddApplicationOffer(context.Background(), &cd.dbo)
-	if err != nil {
-		c.Fatalf("err is not nil: %s", err)
-	}
-
-	return cd.dbo
-}
-
-// UserDefaults represents user's default configuration for a new model.
-type UserDefaults struct {
-	User     string                 `json:"user"`
-	Defaults map[string]interface{} `json:"defaults"`
-
-	env *Environment
-	dbo dbmodel.IdentityModelDefaults
-}
-
-func (cd *UserDefaults) DBObject(c Tester, db *db.Database) dbmodel.IdentityModelDefaults {
-	if cd.dbo.ID != 0 {
-		return cd.dbo
-	}
-
-	cd.dbo.Identity = cd.env.User(cd.User).DBObject(c, db)
-	cd.dbo.Defaults = cd.Defaults
-
-	err := db.SetIdentityModelDefaults(context.Background(), &cd.dbo)
 	if err != nil {
 		c.Fatalf("err is not nil: %s", err)
 	}
