@@ -9,8 +9,6 @@ import (
 	jujuparams "github.com/juju/juju/rpc/params"
 	"github.com/juju/names/v5"
 	"github.com/juju/version"
-	"github.com/juju/zaputil/zapctx"
-	"go.uber.org/zap"
 
 	"github.com/canonical/jimm/v3/internal/dbmodel"
 	"github.com/canonical/jimm/v3/internal/errors"
@@ -57,8 +55,6 @@ type ControllerService interface {
 	ControllerInfo(ctx context.Context, name string) (*dbmodel.Controller, error)
 	EarliestControllerVersion(ctx context.Context) (version.Number, error)
 	ListControllers(ctx context.Context, user *openfga.User) ([]dbmodel.Controller, error)
-	GetControllerConfig(ctx context.Context, user *dbmodel.Identity) (*dbmodel.ControllerConfig, error)
-	SetControllerConfig(ctx context.Context, user *openfga.User, args jujuparams.ControllerConfigSet) error
 	RemoveController(ctx context.Context, user *openfga.User, controllerName string, force bool) error
 	SetControllerDeprecated(ctx context.Context, user *openfga.User, controllerName string, deprecated bool) error
 }
@@ -67,13 +63,7 @@ type ControllerService interface {
 // settings. Only some settings can be changed after bootstrap.
 // JIMM does not support changing settings via ConfigSet.
 func (r *controllerRoot) ConfigSet(ctx context.Context, args jujuparams.ControllerConfigSet) error {
-	const op = errors.Op("jujuapi.ConfigSet")
-
-	err := r.jimm.SetControllerConfig(ctx, r.user, args)
-	if err != nil {
-		return errors.E(op, err)
-	}
-	return nil
+	return errors.E(errors.CodeNotSupported)
 }
 
 // MongoVersion allows the introspection of the mongo version per
@@ -231,32 +221,7 @@ func (r *controllerRoot) ModelStatus(ctx context.Context, args jujuparams.Entiti
 
 // ControllerConfig returns the controller's configuration.
 func (r *controllerRoot) ControllerConfig(ctx context.Context) (jujuparams.ControllerConfigResult, error) {
-	const op = errors.Op("jujuapi.ControllerConfig")
-
-	isAdmin := r.user.JimmAdmin
-	if !isAdmin {
-		isControllerAdmin, err := openfga.IsAdministrator(ctx, r.user, names.NewControllerTag(r.params.ControllerUUID))
-		if err != nil {
-			zapctx.Error(ctx, "failed to check access rights", zap.Error(err))
-			return jujuparams.ControllerConfigResult{}, errors.E(op, errors.CodeUnauthorized, "unauthorized")
-		}
-		isAdmin = isControllerAdmin
-	}
-	if !isAdmin {
-		return jujuparams.ControllerConfigResult{
-			Config: jujuparams.ControllerConfig{},
-		}, nil
-	}
-
-	cfg, err := r.jimm.GetControllerConfig(ctx, r.user.Identity)
-	if err != nil {
-		return jujuparams.ControllerConfigResult{}, errors.E(op, err)
-	}
-	result := jujuparams.ControllerConfigResult{
-		Config: jujuparams.ControllerConfig(cfg.Config),
-	}
-
-	return result, nil
+	return jujuparams.ControllerConfigResult{}, errors.E(errors.CodeNotSupported)
 }
 
 // ModelConfig returns implements the controller facade's ModelConfig

@@ -585,22 +585,7 @@ func TestImportModel(t *testing.T) {
 			CloudCredential: dbmodel.CloudCredential{
 				Name: "test-credential",
 			},
-			Type:          "test-type",
-			DefaultSeries: "test-series",
-			Life:          state.Alive.String(),
-			Status: dbmodel.Status{
-				Status: "available",
-				Info:   "updated status message",
-				Since: sql.NullTime{
-					Valid: true,
-					Time:  now,
-				},
-				Version: "1.2.3",
-			},
-			SLA: dbmodel.SLA{
-				Level: "1",
-				Owner: "me",
-			},
+			Life: state.Alive.String(),
 		},
 	}, {
 		about:          "model from local user imported",
@@ -673,22 +658,7 @@ func TestImportModel(t *testing.T) {
 			CloudCredential: dbmodel.CloudCredential{
 				Name: "test-credential",
 			},
-			Type:          "test-type",
-			DefaultSeries: "test-series",
-			Life:          state.Alive.String(),
-			Status: dbmodel.Status{
-				Status: "available",
-				Info:   "test-info",
-				Since: sql.NullTime{
-					Valid: true,
-					Time:  now,
-				},
-				Version: "2.1.0",
-			},
-			SLA: dbmodel.SLA{
-				Level: "essential",
-				Owner: "local-user",
-			},
+			Life: state.Alive.String(),
 		},
 	}, {
 		about:          "new model owner is local user",
@@ -909,31 +879,19 @@ func TestImportModel(t *testing.T) {
 			CloudCredential: dbmodel.CloudCredential{
 				Name: "test-credential",
 			},
-			Type:          "test-type",
-			DefaultSeries: "test-series",
-			Life:          state.Alive.String(),
-			Status: dbmodel.Status{
-				Status: "ok",
-				Info:   "test-info",
-				Since: sql.NullTime{
-					Valid: true,
-					Time:  now,
+			Life: state.Alive.String(),
+			Offers: []dbmodel.ApplicationOffer{
+				{
+					URL:  "url1",
+					UUID: "00000001-0000-0000-0000-000000000001",
+					Name: "offer1",
 				},
-				Version: "2.1.0",
+				{
+					URL:  "url2",
+					UUID: "00000001-0000-0000-0000-000000000002",
+					Name: "offer2",
+				},
 			},
-			SLA: dbmodel.SLA{
-				Level: "essential",
-				Owner: "alice@canonical.com",
-			},
-			Offers: []dbmodel.ApplicationOffer{{
-				URL:  "url1",
-				UUID: "00000001-0000-0000-0000-000000000001",
-				Name: "offer1",
-			}, {
-				URL:  "url2",
-				UUID: "00000001-0000-0000-0000-000000000002",
-				Name: "offer2",
-			}},
 		},
 		offers: []jujuparams.ApplicationOfferAdminDetailsV5{{
 			ApplicationOfferDetailsV5: jujuparams.ApplicationOfferDetailsV5{
@@ -956,21 +914,6 @@ func TestImportModel(t *testing.T) {
 		c.Run(test.about, func(c *qt.C) {
 			api := &jimmtest.API{
 				ModelInfo_: test.modelInfo,
-				ModelWatcherNext_: func(ctx context.Context, id string) ([]jujuparams.Delta, error) {
-					if id != test.about {
-						return nil, errors.E("incorrect id")
-					}
-					return test.deltas, nil
-				},
-				ModelWatcherStop_: func(ctx context.Context, id string) error {
-					if id != test.about {
-						return errors.E("incorrect id")
-					}
-					return nil
-				},
-				WatchAll_: func(context.Context) (string, error) {
-					return test.about, nil
-				},
 				ListApplicationOffers_: func(ctx context.Context, of []jujuparams.OfferFilter) ([]jujuparams.ApplicationOfferAdminDetailsV5, error) {
 					return test.offers, nil
 				},
@@ -1022,172 +965,6 @@ func TestImportModel(t *testing.T) {
 					c.Assert(err, qt.IsNil)
 					c.Assert(ok, qt.IsTrue)
 				}
-			} else {
-				c.Assert(err, qt.ErrorMatches, test.expectedError)
-			}
-		})
-	}
-}
-
-const testControllerConfigEnv = `
-users:
-- username: alice@canonical.com
-- username: eve@canonical.com
-- username: fred@canonical.com
-`
-
-func TestSetControllerConfig(t *testing.T) {
-	c := qt.New(t)
-
-	tests := []struct {
-		about          string
-		user           string
-		args           jujuparams.ControllerConfigSet
-		jimmAdmin      bool
-		expectedError  string
-		expectedConfig dbmodel.ControllerConfig
-	}{{
-		about: "admin allowed to set config",
-		user:  "alice@canonical.com",
-		args: jujuparams.ControllerConfigSet{
-			Config: map[string]interface{}{
-				"key1": "value1",
-				"key2": "value2",
-				"key3": "value3",
-			},
-		},
-		jimmAdmin: true,
-		expectedConfig: dbmodel.ControllerConfig{
-			Name: "jimm",
-			Config: map[string]interface{}{
-				"key1": "value1",
-				"key2": "value2",
-				"key3": "value3",
-			},
-		},
-	}, {
-		about: "add-model user - unauthorized",
-		user:  "eve@canonical.com",
-		args: jujuparams.ControllerConfigSet{
-			Config: map[string]interface{}{
-				"key1": "value1",
-				"key2": "value2",
-				"key3": "value3",
-			},
-		},
-		expectedError: "unauthorized",
-	}, {
-		about: "login user - unauthorized",
-		user:  "fred@canonical.com",
-		args: jujuparams.ControllerConfigSet{
-			Config: map[string]interface{}{
-				"key1": "value1",
-				"key2": "value2",
-				"key3": "value3",
-			},
-		},
-		expectedError: "unauthorized",
-	}}
-
-	for _, test := range tests {
-		c.Run(test.about, func(c *qt.C) {
-			j := jimmtest.NewJIMM(c, nil)
-
-			env := jimmtest.ParseEnvironment(c, testControllerConfigEnv)
-			env.PopulateDB(c, j.Database)
-
-			dbUser := env.User(test.user).DBObject(c, j.Database)
-			user := openfga.NewUser(&dbUser, nil)
-			user.JimmAdmin = test.jimmAdmin
-
-			ctx := context.Background()
-
-			err := j.SetControllerConfig(ctx, user, test.args)
-			if test.expectedError == "" {
-				c.Assert(err, qt.IsNil)
-
-				cfg := dbmodel.ControllerConfig{
-					Name: "jimm",
-				}
-				err = j.Database.GetControllerConfig(ctx, &cfg)
-				c.Assert(err, qt.IsNil)
-				c.Assert(cfg, jimmtest.DBObjectEquals, test.expectedConfig)
-			} else {
-				c.Assert(err, qt.ErrorMatches, test.expectedError)
-			}
-		})
-	}
-}
-
-func TestGetControllerConfig(t *testing.T) {
-	c := qt.New(t)
-
-	tests := []struct {
-		about          string
-		user           string
-		jimmAdmin      bool
-		expectedError  string
-		expectedConfig dbmodel.ControllerConfig
-	}{{
-		about:     "admin allowed to set config",
-		user:      "alice@canonical.com",
-		jimmAdmin: true,
-		expectedConfig: dbmodel.ControllerConfig{
-			Name: "jimm",
-			Config: map[string]interface{}{
-				"key1": "value1",
-			},
-		},
-	}, {
-		about:     "add-model user - unauthorized",
-		user:      "eve@canonical.com",
-		jimmAdmin: false,
-		expectedConfig: dbmodel.ControllerConfig{
-			Name: "jimm",
-			Config: map[string]interface{}{
-				"key1": "value1",
-			},
-		},
-	}, {
-		about:     "login user - unauthorized",
-		user:      "fred@canonical.com",
-		jimmAdmin: false,
-		expectedConfig: dbmodel.ControllerConfig{
-			Name: "jimm",
-			Config: map[string]interface{}{
-				"key1": "value1",
-			},
-		},
-	}}
-
-	for _, test := range tests {
-		c.Run(test.about, func(c *qt.C) {
-			j := jimmtest.NewJIMM(c, nil)
-
-			env := jimmtest.ParseEnvironment(c, testImportModelEnv)
-			env.PopulateDB(c, j.Database)
-
-			dbSuperuser := env.User("alice@canonical.com").DBObject(c, j.Database)
-			superuser := openfga.NewUser(&dbSuperuser, nil)
-			superuser.JimmAdmin = true
-
-			dbUser := env.User(test.user).DBObject(c, j.Database)
-			user := openfga.NewUser(&dbUser, nil)
-			user.JimmAdmin = test.jimmAdmin
-
-			ctx := context.Background()
-
-			err := j.SetControllerConfig(ctx, superuser, jujuparams.ControllerConfigSet{
-				Config: map[string]interface{}{
-					"key1": "value1",
-				},
-			})
-			c.Assert(err, qt.Equals, nil)
-
-			cfg, err := j.GetControllerConfig(ctx, user.Identity)
-			if test.expectedError == "" {
-				c.Assert(err, qt.IsNil)
-				c.Assert(cfg, jimmtest.DBObjectEquals, &test.expectedConfig)
 			} else {
 				c.Assert(err, qt.ErrorMatches, test.expectedError)
 			}
@@ -1410,19 +1187,12 @@ controllers:
   agent-version: 3.3
 models:
 - name: model-1
-  type: iaas
   uuid: 00000002-0000-0000-0000-000000000003
   controller: controller-1
-  default-series: mantic
   cloud: test-cloud
   region: test-region-1
   cloud-credential: test-cred
   owner: alice@canonical.com
-  life: alive
-  status:
-    status: available
-    info: "OK!"
-    since: 2020-02-20T20:02:20Z
   users:
   - user: alice@canonical.com
     access: admin
@@ -1430,19 +1200,13 @@ models:
     access: write
   - user: charlie@canonical.com
     access: read
-  sla:
-    level: unsupported
-  agent-version: 3.3
 - name: model-2
-  type: iaas
   uuid: 00000002-0000-0000-0000-000000000004
   controller: controller-2
-  default-series: mantic
   cloud: test-cloud
   region: test-region-1
   cloud-credential: test-cred
   owner: alice@canonical.com
-  life: alive
   status:
     status: available
     info: "OK!"
@@ -1454,9 +1218,6 @@ models:
     access: write
   - user: charlie@canonical.com
     access: read
-  sla:
-    level: unsupported
-  agent-version: 3.3
 `
 
 func TestInitiateMigration(t *testing.T) {

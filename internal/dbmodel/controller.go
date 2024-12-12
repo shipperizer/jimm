@@ -197,13 +197,3 @@ type CloudRegionControllerPriority struct {
 	// chosen when deploying to a cloud-region.
 	Priority uint
 }
-
-// ControllerConfig stores controller configuration.
-type ControllerConfig struct {
-	gorm.Model
-
-	// Name is the name given to this configuration.
-	Name string `gorm:"not null;uniqueIndex"`
-	// Config stores the controller configuration
-	Config Map
-}
