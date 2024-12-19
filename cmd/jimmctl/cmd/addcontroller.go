@@ -3,6 +3,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/juju/cmd/v3"
 	"github.com/juju/gnuflag"
 	jujuapi "github.com/juju/juju/api"
@@ -82,27 +84,31 @@ func (c *addControllerCommand) Init(args []string) error {
 
 // Run implements Command.Run.
 func (c *addControllerCommand) Run(ctxt *cmd.Context) error {
+	fmt.Println("c.store.CurrentController()")
 	currentController, err := c.store.CurrentController()
 	if err != nil {
 		return errors.E(err, "could not determine controller")
 	}
 
+	fmt.Println("c.NewAPIRootWithDialOpts")
 	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
 	if err != nil {
 		return err
 	}
 
+	fmt.Println("unmarshalYAMLFile")
 	var params apiparams.AddControllerRequest
 	if err = unmarshalYAMLFile(ctxt, &params, c.file); err != nil {
 		return errors.E(err)
 	}
-
+	fmt.Println("api.NewClient(apiCaller)")
 	client := api.NewClient(apiCaller)
+	fmt.Println("client.AddController(&params)")
 	info, err := client.AddController(&params)
 	if err != nil {
 		return errors.E(err)
 	}
-
+	fmt.Println("c.out.Write(ctxt, info)")
 	err = c.out.Write(ctxt, info)
 	if err != nil {
 		return errors.E(err)
